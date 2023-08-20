@@ -1,27 +1,48 @@
 import { AccountBalanceWalletOutlined, LocalMallOutlined, ThumbUpAltOutlined } from '@mui/icons-material'
-import { FormControl, InputLabel, MenuItem, Select } from '@mui/material'
+import { Alert, Backdrop, Fade, FormControl, InputLabel, MenuItem, Select, Slide, Snackbar, capitalize } from '@mui/material'
 import TextField from "@mui/material/TextField"
-import { DatePicker, LocalizationProvider, MobileDatePicker } from '@mui/x-date-pickers'
+import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { fetchUser } from '../redux/apiCalls'
-import { toPascalCase } from './Product'
-import dayjs from 'dayjs'
+import { fetchUser, updateUser } from '../redux/apiCalls'
+import HashLoader from "react-spinners/PuffLoader"
 
 const User = () => {
 
     const [user, setUser]= useState();
     const [staticUser, setStaticUser]= useState();
+    const [isLoading, setIsLoading]= useState(false);
+    const [updateStatus, setUpdateStatus]= useState({});
     const {userId}= useParams();
 
+    function SlideTransition(props) {
+        return <Slide {...props} direction="up" />;
+    }
+
+    useEffect(()=>{
+        const getUser=async()=>{
+            const data= await fetchUser(userId);
+            if(!data.error){
+                if(data.gender)
+                    data.gender=await capitalize(data.gender)
+                setUser(data);
+                setStaticUser(data);
+            }
+        }
+        getUser();
+    },[userId])
+
+    const capitalize=(text)=>{
+        return text[0].toUpperCase().concat(text.slice(1))
+    }
     const handleDateChange=(value)=>{
         setUser(prev=>({...prev,birthdate:value.format("L")}))
     }
     const handleChange=(e)=>{
         const fieldName=e.target.name;
         const value=e.target.value;
-        setUser(prev=>({...prev,[fieldName]:value}))
+        setUser(prev=>({...prev,[fieldName]:value}))            
     }
     const handleAddressChange=(e)=>{
         const fieldName=e.target.name;
@@ -29,28 +50,37 @@ const User = () => {
         setUser(prev=>({...prev,address:{...prev.address,[fieldName]:value}}))
     }
 
-    const handleUpdate=()=>{
-        console.log(user);
-    }
-    useEffect(()=>{
-        const getUser=async()=>{
-            const data= await fetchUser(userId);
-            if(!data.error){
-                if(data.gender)
-                    data.gender=await toPascalCase(data.gender)
-                setUser(data);
-                setStaticUser(data);
-            }
+    const handleUpdate=async()=>{
+        setIsLoading(true);
+        const res= await updateUser(userId,user);
+        setIsLoading(false);
+        if(!res.error){
+            setUpdateStatus({
+                status:"success",
+                message:"Data updated successfully"
+            });
+            setStaticUser(user);
         }
+        else{
+            setUpdateStatus({
+                status:"error",
+                message:res.error.response.data.error
+            })
+        }
+        
+    }
+    const handleClose=(event, reason)=>{
+        if(reason==='clickaway')
+            return;
 
-        getUser();
-    },[userId])
+        setUpdateStatus({})
+    }
 
   return (
     <>
         {
             user &&
-    
+            (
             <div className='userContainer'>
                 <div className='userWrapper'>
 
@@ -198,7 +228,7 @@ const User = () => {
                                             labelId="gender-label"
                                             id="gender"
                                             name="gender"
-                                            value={user?.gender?.toLowerCase()}
+                                            value={user?.gender? user.gender.toLowerCase():""}
                                             onChange={handleChange}
                                             >
                                             <MenuItem value="male">Male</MenuItem>
@@ -324,7 +354,36 @@ const User = () => {
                     </div>
                 </div>
             </div>
-    
+            )
+
+        }
+        {
+            <Backdrop
+                sx={{ backgroundColor: '#ebe8e899', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+                open={isLoading}
+            >
+                <HashLoader
+                    color='darkblue'
+                    loading={isLoading}
+                />
+            </Backdrop>
+        }
+        {
+            <Snackbar 
+                open={updateStatus.status!==undefined} 
+                autoHideDuration={3000} 
+                onClose={handleClose}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                TransitionComponent={SlideTransition}
+            >
+                {
+                    updateStatus.status &&
+                    <Alert severity={updateStatus.status} variant='filled' onClose={handleClose} >
+                        {updateStatus.message}
+                    </Alert>
+
+                }
+            </Snackbar>
         }
 
     </>

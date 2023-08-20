@@ -50,6 +50,19 @@ export const fetchUser=async(userId)=>{
     }
 
 }
+export const updateUser=async(userId,user)=>{
+    const token= getToken();
+    try {
+        const res= await axios.put("/api/users/"+userId,user,{
+            headers:{
+                "Authorization":"Bearer "+token
+            }
+        });
+        return res.data;
+    } catch (error) {
+        return {error}
+    }
+}
 
 export const fetchOrders=async()=>{
     const token = getToken();
