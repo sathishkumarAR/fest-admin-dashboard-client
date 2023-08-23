@@ -1,11 +1,12 @@
 import { AccountBalanceWalletOutlined, LocalMallOutlined, ThumbUpAltOutlined } from '@mui/icons-material'
-import { Checkbox, FormControl, InputLabel, ListItemText, MenuItem, Select, TextField } from '@mui/material'
-import React, { useState } from 'react'
+import { Alert, Backdrop, Checkbox, FormControl, InputLabel, ListItemText, MenuItem, Select, Slide, Snackbar, TextField } from '@mui/material'
+import React, { useRef, useState } from 'react'
 import { useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import Chart from '../components/Chart'
 import { productData } from '../dummyData'
 import { fetchProduct, updateProduct, uploadProductImage } from '../redux/apiCalls'
+import PuffLoader from 'react-spinners/PuffLoader'
 
 const ITEM_HEIGHT = 48;
 const ITEM_PADDING_TOP = 8;
@@ -26,12 +27,19 @@ export const toPascalCase=(text)=>(
     .concat(word.slice(1)))
     .join('')
 )
+
+function SlideTransition(props) {
+        return <Slide {...props} direction="up" />;
+}
+
 const Product = () => {
     const [product,setProduct]= useState({})
-    const [productStatus, setProductStatus] = useState("active");
     const {productId}= useParams();
     const [image, setImage] = useState();
+    const [isLoading, setIsLoading]= useState(false);
+    const [updateStatus, setUpdateStatus]= useState({});
     const [error, setError] = useState({});
+    const ref= useRef(false);
 
     useEffect(()=>{
         const getProduct=async()=>{
@@ -46,9 +54,6 @@ const Product = () => {
         getProduct();
     },[productId])
 
-    const handleStatusChange=(newStatus)=>{
-        setProductStatus(newStatus)
-    }
     const handleColors =(e)=>{
         const value= e.target.value;
         const selectedColors= typeof value==='string'? value.split(","):value;
@@ -80,20 +85,16 @@ const Product = () => {
         }
     }
 
-    const handleTextFieldChange=(e)=>{
-        
-        if(e.target.id==='product-desc-update')
-            setProduct(prev=>({...prev,desc:e.target.value}))
+    const handleChange=(e)=>{
+        const name=e.target.name;
+        const value=e.target.value;
 
-        if(e.target.id==='product-subtitle-update')
-            setProduct(prev=>({...prev,subtitle:e.target.value}))
+        setProduct(prev=>({...prev,[name]:value}))
     }
 
     const handleChange_num=(e)=>{
         const re= /^[0-9]+$/;
-        console.log(e.target.value);
         if(e.target.value==='' || (re.test(e.target.value)) ){
-            // console.log("stock");
             if(e.target.id==='stock')
                 setProduct(prev=>({...prev,stock:e.target.value}))
         }
@@ -111,34 +112,61 @@ const Product = () => {
     
     const uploadImage=async(img)=>{
 
-        const res= await uploadProductImage(img);
-        if(!res.error)
-            return res
+        const imgURL= await uploadProductImage(img);
+        
+        if(!imgURL){
+            setIsLoading(false);
+            setUpdateStatus({
+                status:"error",
+                message:"Invalid Image. Please select a valid image"
+            })
+            return setError(prev=>({...prev,img:"Invalid Image"}));
+
+        }
+        
+        setError(prev=>({...prev,img:null}))
+        setProduct(prev=>({...prev,img:imgURL}))
+
     }
 
 
     const handleUpdate=async()=>{
-        const imgURL= await uploadImage(image);
-
-        if(!imgURL){
-            return setError(prev=>({...prev,img:"Invalid Image"}))
-        }
-        else{
-            setError(prev=>({...prev,img:null}))
-        }
-
-        const res= await updateProduct(productId, product);
-
-        if(res.error){
-            console.log(res.error)
-        }
-        else{
-            console.log(res)
-        }
-
-
+        ref.current=true;
+        setIsLoading(true);
+        await uploadImage(image);
     }
 
+    useEffect(()=>{
+        if(ref.current){
+            updateProductData();
+            ref.current=false;
+        }
+    },[product])
+
+    const updateProductData=async()=>{
+        const res= await updateProduct(productId, product);
+        
+        setIsLoading(false);
+
+        if(res.error){
+            setUpdateStatus({
+                status:"error",
+                message:res.error.response.data.error
+            })
+        }
+        else{
+            setUpdateStatus({
+                status:"success",
+                message:res.message
+            })
+        }
+    }
+    const handleCloseSnackbar=(event, reason)=>{
+        if(reason==='clickaway')
+            return;
+
+        setUpdateStatus({})
+    }
     const colors = [
     'Black',
     'White',
@@ -264,7 +292,7 @@ const Product = () => {
                         id="outlined-basic" 
                         label="Product Name" 
                         variant="filled"
-                        defaultValue={product.title}
+                        value={product.title}
                         size="small"
                         color='primary'
                         disabled
@@ -275,8 +303,7 @@ const Product = () => {
                         id="outlined-basic" 
                         label="Product ID" 
                         variant="filled"
-                        defaultValue={product._id}
-                        // value={product._id}
+                        value={product._id}
                         size="small"
                         color='primary'
                         disabled
@@ -284,11 +311,12 @@ const Product = () => {
                     
                     <TextField 
                         className='userInputField'
-                        id="product-subtitle-update" 
+                        id="product-subtitle-update"
+                        name="subtitle" 
                         label="Product Subtitle" 
                         variant="filled"
-                        defaultValue={product?.subtitle}
-                        onChange={handleTextFieldChange}
+                        value={product?.subtitle}
+                        onChange={handleChange}
                         size="small"
                         color='primary'
                     />
@@ -326,7 +354,6 @@ const Product = () => {
                         id="selling-price" 
                         label="Selling Price (₹)" 
                         variant="filled"
-                        // defaultValue={product?.sellingPrice}
                         value={product?.sellingPrice}
                         onChange={handleChange_numWithDecimal}
                         size="small"
@@ -338,7 +365,6 @@ const Product = () => {
                         id="mrp" 
                         label="MRP (₹)" 
                         variant="filled"
-                        // defaultValue={product?.MRP}
                         value={product?.MRP}
                         onChange={handleChange_numWithDecimal}
                         size="small"
@@ -413,8 +439,9 @@ const Product = () => {
                         <Select
                             labelId="productStatus-label"
                             id="product-status"
-                            value={productStatus}
-                            onChange={(e)=>handleStatusChange(e.target.value)}
+                            name="status"
+                            value={product?.status}
+                            onChange={handleChange}
                         >
                             <MenuItem value="active">Active</MenuItem>
                             <MenuItem value="inactive">Inactive</MenuItem>
@@ -434,11 +461,11 @@ const Product = () => {
                     <TextField 
                         className='product-desc-update userInputField'
                         id="product-desc-update" 
+                        name="desc"
                         label="Product Description *" 
                         variant="filled"
-                        defaultValue={product?.desc} 
                         value={product?.desc}
-                        onChange={handleTextFieldChange}
+                        onChange={handleChange}
                         size="small"
                         multiline
                         rows={4}
@@ -468,6 +495,34 @@ const Product = () => {
         </div>
     </div>
     }
+    {
+            <Backdrop
+                sx={{ backgroundColor: '#ebe8e899', zIndex: (theme) => theme.zIndex.drawer + 1 }}
+                open={isLoading}
+            >
+                <PuffLoader
+                    color='darkblue'
+                    loading={isLoading}
+                />
+            </Backdrop>
+        }
+        {
+            <Snackbar 
+                open={updateStatus.status!==undefined} 
+                autoHideDuration={3000} 
+                onClose={handleCloseSnackbar}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                TransitionComponent={SlideTransition}
+            >
+                {
+                    updateStatus.status &&
+                    <Alert severity={updateStatus.status} variant='filled' onClose={handleCloseSnackbar} >
+                        {updateStatus.message}
+                    </Alert>
+
+                }
+            </Snackbar>
+        }
     </>
     
   )

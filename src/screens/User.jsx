@@ -6,7 +6,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { fetchUser, updateUser } from '../redux/apiCalls'
-import HashLoader from "react-spinners/PuffLoader"
+import PuffLoader from "react-spinners/PuffLoader"
 
 const User = () => {
 
@@ -362,7 +362,7 @@ const User = () => {
                 sx={{ backgroundColor: '#ebe8e899', zIndex: (theme) => theme.zIndex.drawer + 1 }}
                 open={isLoading}
             >
-                <HashLoader
+                <PuffLoader
                     color='darkblue'
                     loading={isLoading}
                 />
