@@ -12,12 +12,13 @@ export const login=async(dispatch,user)=>{
 
     dispatch(loginStart())
 
-    try {
+    try { 
         const res = await axios.post("/api/auth/login", user)
         dispatch(loginSuccess(res.data))
 
     } catch (error) {
         dispatch(loginFailure())
+        return {error}
     }
 }
 

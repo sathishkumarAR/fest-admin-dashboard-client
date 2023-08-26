@@ -936,10 +936,16 @@
   cursor: pointer;
   font-weight: 600;
   font-size: 14px;
-  margin-top: 20px;
+  margin: 20px 0 15px 0;
 }
 .loginBtn:hover{
   background-color: rgb(18, 18, 101);
+}
+
+.form-error{
+  color: red;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 /********* ACCESS DENIED ***********/
