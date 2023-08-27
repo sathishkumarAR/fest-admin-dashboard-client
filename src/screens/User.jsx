@@ -105,7 +105,7 @@ const User = () => {
 
                             <div className="userLeftUserInfo">
                                 <span className='userLeftInfo-heading'>{staticUser?.fullname}</span>
-                                <span className='userLeftInfo-subheading'>{staticUser?.address.district}</span>
+                                <span className='userLeftInfo-subheading'>{staticUser?.address?.district}</span>
                             </div>
                             <div className="userActivity">
                                 <span className="userActivityHeading">Activity</span>
