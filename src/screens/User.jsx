@@ -88,11 +88,11 @@ const User = () => {
                         <h3 className="userHeading">
                             User Details
                         </h3>
-                        <Link to="/adduser">
+                        {/* <Link to="/adduser">
                             <button className="userBtn">
                                 Create New User
                             </button>
-                        </Link>
+                        </Link> */}
                     </div>
 
                     <div className="userCenterContainer">
